@@ -3,6 +3,7 @@ import { useTasks } from './hooks/useTasks';
 import type { TaskPriority, Task } from './types/task';
 import { Modal } from './components/Modal';
 import { SplitTaskModal } from './components/SplitTaskModal';
+import { TaskDetailModal } from './components/TaskDetailModal';
 
 function App() {
   const { tasks, addTask, updateTaskStatus, deleteTask, restoreTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem, splitTask, mergeTasks } = useTasks();
@@ -14,6 +15,7 @@ function App() {
   const [splitModalOpen, setSplitModalOpen] = useState(false);
   const [splitTaskId, setSplitTaskId] = useState<string | null>(null);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   // Undo state
   const [deletedTask, setDeletedTask] = useState<{ id: string, title: string } | null>(null);
@@ -84,6 +86,8 @@ function App() {
     }
   };
 
+  const detailTask = tasks?.find(t => t.id === detailTaskId) || null;
+
   return (
     <div style={{ padding: 'var(--space-8)', maxWidth: '800px', margin: '0 auto' }}>
       <SplitTaskModal
@@ -99,6 +103,11 @@ function App() {
         onClose={() => setMergeModalOpen(false)}
         onSubmit={handleMergeSubmit}
         submitLabel="Merge"
+      />
+      <TaskDetailModal
+        task={detailTask}
+        onClose={() => setDetailTaskId(null)}
+        onTaskClick={(taskId) => setDetailTaskId(taskId)}
       />
 
       {/* Undo Notification */}
@@ -271,6 +280,20 @@ function App() {
 
               {!isSelectionMode && (
                 <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <button
+                    onClick={() => setDetailTaskId(task.id)}
+                    style={{
+                      padding: 'var(--space-2) var(--space-4)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-primary)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-primary)',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    詳細
+                  </button>
                   {task.status === 'todo' && (
                     <button
                       onClick={() => updateTaskStatus(task.id, 'inprogress')}

@@ -144,7 +144,7 @@ export function useTasks() {
             priority: 'medium',
             tags: [...new Set(sourceTasks.flatMap(t => t.tags))],
             checklist: [],
-            relations: sourceTaskIds.map(id => ({ targetId: id, type: 'child' })),
+            relations: [], // 統合時はrelationsを使用せず、履歴データのみで管理
             timeLogs: [],
             isDeleted: false,
             createdAt: new Date().toISOString(),
