@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactFlow, {
     Controls,
     Background,
     MiniMap,
     Handle,
     Position,
-    Panel,
     type NodeProps,
     type Node,
     type Edge,
@@ -94,13 +93,37 @@ export function AllTasksGraph({ onTaskClick }: AllTasksGraphProps) {
 
     const { nodes, edges, loading } = useTaskGraph(null, 'all', timeFilter);
 
+    // Initialize filter inputs with current data range
+    useEffect(() => {
+        if (!loading && nodes.length > 0 && !startDateInput && !endDateInput) {
+            const tasks = nodes.map(n => n.data.task).filter(Boolean);
+            if (tasks.length === 0) return;
+
+            const dates = tasks.map(t => new Date(t.createdAt).getTime());
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+
+            // Format as YYYY-MM-DD for input[type="date"]
+            const formatDateInput = (date: Date) => {
+                return date.toISOString().split('T')[0];
+            };
+
+            setStartDateInput(formatDateInput(minDate));
+            setEndDateInput(formatDateInput(maxDate));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, nodes]);
+
     const handleApplyFilter = () => {
         const filter: TimeFilter = {};
         if (startDateInput) {
             filter.startDate = new Date(startDateInput);
         }
         if (endDateInput) {
-            filter.endDate = new Date(endDateInput);
+            // Set end date to end of the day
+            const end = new Date(endDateInput);
+            end.setHours(23, 59, 59, 999);
+            filter.endDate = end;
         }
         setTimeFilter(filter);
     };
@@ -116,32 +139,6 @@ export function AllTasksGraph({ onTaskClick }: AllTasksGraphProps) {
             onTaskClick(node.data.task.id);
         }
     };
-
-    // Calculate time axis labels based on nodes
-    const getTimeAxisLabels = () => {
-        if (nodes.length === 0) return [];
-
-        const tasks = nodes.map(n => n.data.task).filter(Boolean);
-        const dates = tasks.map(t => new Date(t.createdAt).getTime());
-        const minDate = Math.min(...dates);
-        const maxDate = Math.max(...dates);
-
-        // Create 5-7 evenly spaced labels
-        const labelCount = 6;
-        const labels = [];
-        for (let i = 0; i < labelCount; i++) {
-            const timestamp = minDate + (maxDate - minDate) * (i / (labelCount - 1));
-            const date = new Date(timestamp);
-            labels.push({
-                date: date.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' }),
-                time: date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                position: i * 20 // percentage
-            });
-        }
-        return labels;
-    };
-
-    const timeAxisLabels = getTimeAxisLabels();
 
     if (loading) {
         return <div style={{ padding: '20px', textAlign: 'center' }}>Loading graph...</div>;
@@ -245,39 +242,6 @@ export function AllTasksGraph({ onTaskClick }: AllTasksGraphProps) {
                         <Background color="#aaa" gap={16} />
                         <Controls />
                         <MiniMap />
-
-                        {/* Time Axis Panel - moves with graph */}
-                        {timeAxisLabels.length > 0 && (
-                            <Panel position="top-center" style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                border: '1px solid var(--color-border)',
-                                minWidth: '600px'
-                            }}>
-                                <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-                                    時間軸 (作成日時)
-                                </div>
-                                <div style={{ position: 'relative', height: '20px' }}>
-                                    {timeAxisLabels.map((label, index) => (
-                                        <div
-                                            key={index}
-                                            style={{
-                                                position: 'absolute',
-                                                left: `${label.position}%`,
-                                                fontSize: '9px',
-                                                color: 'var(--color-text-muted)',
-                                                transform: 'translateX(-50%)',
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                        >
-                                            {label.date} {label.time}
-                                        </div>
-                                    ))}
-                                </div>
-                            </Panel>
-                        )}
                     </ReactFlow>
                 )}
             </div>

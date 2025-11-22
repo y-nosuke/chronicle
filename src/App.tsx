@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useTasks } from './hooks/useTasks';
 import type { TaskPriority, Task } from './types/task';
@@ -25,7 +25,13 @@ function TaskList() {
   const [deletedTask, setDeletedTask] = useState<{ id: string, title: string } | null>(null);
 
   // View mode state
-  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>(() => {
+    return (localStorage.getItem('viewMode') as 'list' | 'graph') || 'list';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('viewMode', viewMode);
+  }, [viewMode]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
