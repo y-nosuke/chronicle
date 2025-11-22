@@ -40,8 +40,6 @@ export interface Task {
     relations: TaskRelation[];
     createdAt: string;
     updatedAt: string;
-    // timeLogs are stored separately or embedded? 
-    // For Dexie performance, maybe embedded is fine if not too huge. 
-    // Let's keep them embedded for MVP simplicity unless analytics needs heavy querying.
     timeLogs: TimeLog[];
+    isDeleted?: boolean;
 }

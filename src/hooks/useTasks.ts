@@ -4,7 +4,8 @@ import type { Task, TaskStatus } from '../types/task';
 import { v4 as uuidv4 } from 'uuid';
 
 export function useTasks() {
-    const tasks = useLiveQuery(() => db.tasks.toArray());
+    // Filter out deleted tasks
+    const tasks = useLiveQuery(() => db.tasks.filter(t => !t.isDeleted).toArray());
 
     const addTask = async (title: string) => {
         const newTask: Task = {
@@ -17,6 +18,7 @@ export function useTasks() {
             checklist: [],
             relations: [],
             timeLogs: [],
+            isDeleted: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
@@ -44,7 +46,12 @@ export function useTasks() {
     };
 
     const deleteTask = async (id: string) => {
-        await db.tasks.delete(id);
+        // Soft delete
+        await db.tasks.update(id, { isDeleted: true, updatedAt: new Date().toISOString() });
+    };
+
+    const restoreTask = async (id: string) => {
+        await db.tasks.update(id, { isDeleted: false, updatedAt: new Date().toISOString() });
     };
 
     const addChecklistItem = async (taskId: string, text: string) => {
@@ -88,8 +95,9 @@ export function useTasks() {
             priority: originalTask.priority,
             tags: originalTask.tags,
             checklist: [],
-            relations: [{ targetId: originalTaskId, type: 'parent' }], // Or 'related'? Let's say parent for now as origin
+            relations: [{ targetId: originalTaskId, type: 'parent' }],
             timeLogs: [],
+            isDeleted: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         }));
@@ -107,11 +115,7 @@ export function useTasks() {
         await db.history.add({
             id: uuidv4(),
             taskId: originalTaskId,
-            type: 'STATUS_CHANGE', // Or maybe we need a specific type for SPLIT? 
-            // The types/task.ts has SPLIT_FROM, but that seems more for the NEW task.
-            // Let's use UPDATED for now with details, or maybe we should add SPLIT_INTO to types?
-            // For now, let's stick to existing types. 
-            // Actually, let's record a custom event or just rely on the new tasks pointing back.
+            type: 'STATUS_CHANGE',
             timestamp: new Date().toISOString(),
             details: { splitInto: newTasks.map(t => t.id) }
         });
@@ -137,11 +141,12 @@ export function useTasks() {
             title: newTitle,
             description: `Merged from: ${sourceTasks.map(t => t.title).join(', ')}`,
             status: 'todo',
-            priority: 'medium', // Default or calculate?
-            tags: [...new Set(sourceTasks.flatMap(t => t.tags))], // Merge tags
-            checklist: [], // Could merge checklists too, but complex.
-            relations: sourceTaskIds.map(id => ({ targetId: id, type: 'child' })), // Point back to sources
+            priority: 'medium',
+            tags: [...new Set(sourceTasks.flatMap(t => t.tags))],
+            checklist: [],
+            relations: sourceTaskIds.map(id => ({ targetId: id, type: 'child' })),
             timeLogs: [],
+            isDeleted: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
@@ -159,13 +164,7 @@ export function useTasks() {
         await db.history.add({
             id: uuidv4(),
             taskId: newTask.id,
-            type: 'MERGED_INTO', // Wait, MERGED_INTO usually means "I was merged into X". 
-            // If this is the NEW task, maybe it should be CREATED (via merge)?
-            // Or maybe MERGED_FROM? 
-            // The type definition has MERGED_INTO. 
-            // Let's assume MERGED_INTO is for the SOURCE tasks saying "I was merged into X".
-            // And the new task is just CREATED or has a special event.
-            // Let's use CREATED with details for the new task.
+            type: 'MERGED_INTO', // Using MERGED_INTO as per previous discussion/stash context
             timestamp: new Date().toISOString(),
             details: { mergedFrom: sourceTaskIds }
         });
@@ -187,6 +186,7 @@ export function useTasks() {
         addTask,
         updateTaskStatus,
         deleteTask,
+        restoreTask,
         addChecklistItem,
         toggleChecklistItem,
         deleteChecklistItem,

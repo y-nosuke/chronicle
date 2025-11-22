@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useTasks } from './hooks/useTasks';
-import type { TaskPriority } from './types/task';
+import type { TaskPriority, Task } from './types/task';
 import { Modal } from './components/Modal';
 import { SplitTaskModal } from './components/SplitTaskModal';
 
 function App() {
-  const { tasks, addTask, updateTaskStatus, deleteTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem, splitTask, mergeTasks } = useTasks();
+  const { tasks, addTask, updateTaskStatus, deleteTask, restoreTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem, splitTask, mergeTasks } = useTasks();
   const [input, setInput] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
 
@@ -15,6 +14,9 @@ function App() {
   const [splitModalOpen, setSplitModalOpen] = useState(false);
   const [splitTaskId, setSplitTaskId] = useState<string | null>(null);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+
+  // Undo state
+  const [deletedTask, setDeletedTask] = useState<{ id: string, title: string } | null>(null);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +50,31 @@ function App() {
     setSplitTaskId(null);
   };
 
+  const handleDelete = async (id: string, title: string) => {
+    await deleteTask(id);
+    setDeletedTask({ id, title });
+    // Auto-hide undo after 5 seconds
+    setTimeout(() => {
+      setDeletedTask(prev => prev && prev.id === id ? null : prev);
+    }, 5000);
+  };
+
+  const handleUndoDelete = async () => {
+    if (deletedTask) {
+      await restoreTask(deletedTask.id);
+      setDeletedTask(null);
+    }
+  };
+
+  const handleDone = async (task: Task) => {
+    const hasIncomplete = task.checklist.some((item) => !item.completed);
+    if (hasIncomplete) {
+      alert('Cannot mark as done: You have incomplete checklist items.');
+      return;
+    }
+    await updateTaskStatus(task.id, 'done');
+  };
+
   const getPriorityColor = (p: TaskPriority) => {
     switch (p) {
       case 'high': return '#ef4444'; // Red
@@ -73,6 +100,52 @@ function App() {
         onSubmit={handleMergeSubmit}
         submitLabel="Merge"
       />
+
+      {/* Undo Notification */}
+      {deletedTask && (
+        <div style={{
+          position: 'fixed',
+          bottom: 'var(--space-8)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'var(--color-text-main)',
+          color: 'var(--color-bg-app)',
+          padding: 'var(--space-3) var(--space-6)',
+          borderRadius: 'var(--radius-full)',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-4)',
+          zIndex: 100
+        }}>
+          <span>Deleted "{deletedTask.title}"</span>
+          <button
+            onClick={handleUndoDelete}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-primary)',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            Undo
+          </button>
+          <button
+            onClick={() => setDeletedTask(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-bg-app)',
+              cursor: 'pointer',
+              fontSize: 'var(--text-lg)'
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <header style={{ marginBottom: 'var(--space-8)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -243,40 +316,57 @@ function App() {
                       Resume
                     </button>
                   )}
-                  {task.status !== 'done' && (
+                  {task.status === 'done' && (
                     <button
-                      onClick={() => updateTaskStatus(task.id, 'done')}
+                      onClick={() => updateTaskStatus(task.id, 'inprogress')}
                       style={{
                         padding: 'var(--space-2) var(--space-4)',
                         fontSize: 'var(--text-sm)',
-                        color: 'var(--color-status-done)',
+                        color: 'var(--color-status-inprogress)',
                         backgroundColor: 'transparent',
-                        border: '1px solid var(--color-status-done)',
+                        border: '1px solid var(--color-status-inprogress)',
                         borderRadius: 'var(--radius-md)'
                       }}
                     >
-                      Done
+                      Resume
                     </button>
                   )}
+                  {task.status !== 'done' && (
+                    <>
+                      <button
+                        onClick={() => handleDone(task)}
+                        style={{
+                          padding: 'var(--space-2) var(--space-4)',
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--color-status-done)',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-status-done)',
+                          borderRadius: 'var(--radius-md)'
+                        }}
+                      >
+                        Done
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSplitTaskId(task.id);
+                          setSplitModalOpen(true);
+                        }}
+                        style={{
+                          padding: 'var(--space-2) var(--space-4)',
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--color-text-main)',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Split
+                      </button>
+                    </>
+                  )}
                   <button
-                    onClick={() => {
-                      setSplitTaskId(task.id);
-                      setSplitModalOpen(true);
-                    }}
-                    style={{
-                      padding: 'var(--space-2) var(--space-4)',
-                      fontSize: 'var(--text-sm)',
-                      color: 'var(--color-text-main)',
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Split
-                  </button>
-                  <button
-                    onClick={() => deleteTask(task.id)}
+                    onClick={() => handleDelete(task.id, task.title)}
                     style={{
                       padding: 'var(--space-2) var(--space-4)',
                       fontSize: 'var(--text-sm)',
@@ -310,74 +400,80 @@ function App() {
                         type="checkbox"
                         checked={item.completed}
                         onChange={() => toggleChecklistItem(task.id, item.id)}
-                        style={{ cursor: 'pointer' }}
+                        disabled={task.status === 'done'}
+                        style={{ cursor: task.status === 'done' ? 'not-allowed' : 'pointer' }}
                       />
                       <span style={{
                         textDecoration: item.completed ? 'line-through' : 'none',
                         color: item.completed ? 'var(--color-text-muted)' : 'var(--color-text-main)',
-                        fontSize: 'var(--text-sm)'
+                        fontSize: 'var(--text-sm)',
+                        opacity: task.status === 'done' ? 0.7 : 1
                       }}>
                         {item.text}
                       </span>
-                      <button
-                        onClick={() => deleteChecklistItem(task.id, item.id)}
-                        style={{
-                          marginLeft: 'auto',
-                          fontSize: 'var(--text-lg)', // Larger icon
-                          padding: 'var(--space-1) var(--space-2)', // More hit area
-                          color: 'var(--color-text-muted)',
-                          border: 'none',
-                          background: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        ×
-                      </button>
+                      {task.status !== 'done' && (
+                        <button
+                          onClick={() => deleteChecklistItem(task.id, item.id)}
+                          style={{
+                            marginLeft: 'auto',
+                            fontSize: 'var(--text-lg)', // Larger icon
+                            padding: 'var(--space-1) var(--space-2)', // More hit area
+                            color: 'var(--color-text-muted)',
+                            border: 'none',
+                            background: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   ))}
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const form = e.target as HTMLFormElement;
-                      const input = form.elements.namedItem('checklistInput') as HTMLInputElement;
-                      if (input.value.trim()) {
-                        addChecklistItem(task.id, input.value);
-                        input.value = '';
-                      }
-                    }}
-                    style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}
-                  >
-                    <input
-                      name="checklistInput"
-                      type="text"
-                      placeholder="Add subtask..."
-                      style={{
-                        flex: 1,
-                        padding: 'var(--space-1) var(--space-2)',
-                        fontSize: 'var(--text-sm)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-sm)'
+                  {task.status !== 'done' && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const form = e.target as HTMLFormElement;
+                        const input = form.elements.namedItem('checklistInput') as HTMLInputElement;
+                        if (input.value.trim()) {
+                          addChecklistItem(task.id, input.value);
+                          input.value = '';
+                        }
                       }}
-                    />
-                    <button
-                      type="submit"
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        padding: 'var(--space-1) var(--space-3)',
-                        backgroundColor: 'var(--color-primary)', // Primary color for visibility
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                      }}
+                      style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}
                     >
-                      Add
-                    </button>
-                  </form>
+                      <input
+                        name="checklistInput"
+                        type="text"
+                        placeholder="Add subtask..."
+                        style={{
+                          flex: 1,
+                          padding: 'var(--space-1) var(--space-2)',
+                          fontSize: 'var(--text-sm)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-sm)'
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          padding: 'var(--space-1) var(--space-3)',
+                          backgroundColor: 'var(--color-primary)', // Primary color for visibility
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 'var(--radius-sm)',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        Add
+                      </button>
+                    </form>
+                  )}
                 </div>
               </div>
             )}
