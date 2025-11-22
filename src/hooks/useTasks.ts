@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { Task, TaskStatus } from '../types/task';
+import type { Task, TaskStatus } from '../types/task';
 import { v4 as uuidv4 } from 'uuid';
 
 export function useTasks() {

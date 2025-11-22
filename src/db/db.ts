@@ -1,5 +1,5 @@
-import Dexie, { Table } from 'dexie';
-import { Task, HistoryEvent } from '../types/task';
+import Dexie, { type Table } from 'dexie';
+import type { Task, HistoryEvent } from '../types/task';
 
 export class ChronicleDB extends Dexie {
     tasks!: Table<Task>;

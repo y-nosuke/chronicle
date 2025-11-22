@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTasks } from './hooks/useTasks';
-import { TaskPriority } from './types/task';
+import type { TaskPriority } from './types/task';
 
 function App() {
   const { tasks, addTask, updateTaskStatus, deleteTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem } = useTasks();
@@ -171,9 +171,11 @@ function App() {
                   style={{
                     padding: 'var(--space-2) var(--space-4)',
                     fontSize: 'var(--text-sm)',
-                    color: 'var(--color-text-muted)',
+                    color: '#ef4444', // Explicit red for visibility
                     backgroundColor: 'transparent',
-                    border: 'none'
+                    border: '1px solid #ef4444',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer'
                   }}
                 >
                   Delete
@@ -210,10 +212,15 @@ function App() {
                       onClick={() => deleteChecklistItem(task.id, item.id)}
                       style={{
                         marginLeft: 'auto',
-                        fontSize: 'var(--text-xs)',
+                        fontSize: 'var(--text-lg)', // Larger icon
+                        padding: 'var(--space-1) var(--space-2)', // More hit area
                         color: 'var(--color-text-muted)',
                         border: 'none',
-                        background: 'none'
+                        background: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
                     >
                       ×
@@ -248,10 +255,13 @@ function App() {
                     type="submit"
                     style={{
                       fontSize: 'var(--text-xs)',
-                      padding: 'var(--space-1) var(--space-2)',
-                      backgroundColor: 'var(--color-bg-surface-hover)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-sm)'
+                      padding: 'var(--space-1) var(--space-3)',
+                      backgroundColor: 'var(--color-primary)', // Primary color for visibility
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
                     }}
                   >
                     Add
