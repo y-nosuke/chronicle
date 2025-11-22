@@ -96,7 +96,15 @@ function TaskList() {
   const detailTask = tasks?.find(t => t.id === detailTaskId) || null;
 
   return (
-    <div style={{ padding: 'var(--space-8)', maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{
+      padding: viewMode === 'graph' ? 0 : 'var(--space-8)',
+      maxWidth: viewMode === 'graph' ? '100%' : '800px',
+      margin: '0 auto',
+      height: viewMode === 'graph' ? '100vh' : 'auto',
+      display: viewMode === 'graph' ? 'flex' : 'block',
+      flexDirection: 'column',
+      overflow: viewMode === 'graph' ? 'hidden' : 'visible'
+    }}>
       <SplitTaskModal
         isOpen={splitModalOpen}
         onClose={() => { setSplitModalOpen(false); setSplitTaskId(null); }}
@@ -163,7 +171,13 @@ function TaskList() {
         </div>
       )}
 
-      <header style={{ marginBottom: 'var(--space-8)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header style={{
+        marginBottom: 'var(--space-8)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: viewMode === 'graph' ? 'var(--space-4)' : 0
+      }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold', marginBottom: 'var(--space-2)' }}>Chronicle</h1>
           <p style={{ color: 'var(--color-text-secondary)' }}>Task Management Reimagined</p>
@@ -258,7 +272,7 @@ function TaskList() {
 
       {/* Graph View */}
       {viewMode === 'graph' ? (
-        <div style={{ height: 'calc(100vh - 200px)' }}>
+        <div style={{ flex: 1, minHeight: 0 }}>
           <AllTasksGraph onTaskClick={(taskId) => setDetailTaskId(taskId)} />
         </div>
       ) : (

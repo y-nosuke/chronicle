@@ -436,7 +436,15 @@ export function useTaskGraph(
             });
 
             levelGroups.forEach((ids, level) => {
-                ids.forEach((id, index) => {
+                // Sort tasks by update time within each level (newest first)
+                const sortedIds = ids.sort((a, b) => {
+                    const taskA = taskMap.get(a);
+                    const taskB = taskMap.get(b);
+                    if (!taskA || !taskB) return 0;
+                    return new Date(taskB.updatedAt).getTime() - new Date(taskA.updatedAt).getTime();
+                });
+
+                sortedIds.forEach((id, index) => {
                     const t = taskMap.get(id);
                     if (t) {
                         newNodes.push({
