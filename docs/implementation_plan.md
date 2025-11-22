@@ -1,93 +1,32 @@
-# タスク管理アプリ 実装計画
+# トレーサビリティグラフUI実装計画 (Antigravity作業用)
 
-## 目標
-Markdownベースのタスク管理を置き換える専用アプリケーションを作成します。トレーサビリティ（追跡可能性）、生産性分析、柔軟なタスク再編成（分割/統合）に重点を置き、オフライン機能とAI統合を実現します。
+## 現在のタスク: フェーズ1 基本機能（タスク詳細モーダル内グラフ）
 
-## ユーザーレビュー事項
-> [!IMPORTANT]
-> **技術スタック**: フロントエンドには **Vite + React + TypeScript** と **Vanilla CSS** を提案します。
-> *   **React (Vite) の理由**: 今回の最優先要件である「オフライン利用」において、サーバー依存のないSPA（シングルページアプリケーション）構成が最適であるためです。Next.jsはサーバーサイド機能が強力ですが、完全オフライン動作や将来のデスクトップアプリ化（Electron等）を考慮すると、Viteによる静的ビルドの方がシンプルで堅牢です。
-> *   **Vanilla CSSの理由**: Tailwind CSSは便利ですが、独自の「プレミアムなデザイン」や微細なアニメーションを作り込むには、標準のCSS変数とCSS Modules/Scoped CSSを組み合わせる方が柔軟性が高く、長期的なメンテナンスもしやすいためです。
-> **オフライン戦略**: 堅牢なオフラインデータ保存のために **Dexie.js (IndexedDB)** を提案します。
-> *   **Dexie.js vs Supabase**: Supabaseはクラウドデータベースであり、オフライン機能もありますが「常時接続」が前提の設計です。今回の要件「インターネット接続がない場合でも使用できる」を最優先すると、ブラウザ内にデータを保存するDexie.js (IndexedDB) が最適です。同期が必要になった場合でも、後から同期ロジックを追加可能です。
-> **AI統合**: ユーザー要望により、MVPでは **ローカルLLM** (例: Ollama接続やWebLLM) を優先して実装します。アーキテクチャは将来的に他のプロバイダーも選択可能なように設計します。
-> **カレンダー同期**: MVPでは **対象外** とします。将来的な機能として検討します。
+`docs/specs/traceability_graph.md` (仕様) と `docs/designs/traceability_graph.md` (設計) に基づき、実装を進める。
 
-## 要件と実装のマッピング
-ユーザー様の元要件がどの実装項目に対応するかを示します。
+### 実装ステップ
 
-| 元要件 | 対応する実装項目 | 実装状況 |
-| :--- | :--- | :--- |
-| タスク作成・着手・完了の簡易操作 | **Core Implementation**: タスクCRUD & 状態管理 | ✅ 完了 |
-| タスクの保留・優先度変更 | **Core Implementation**: 「保留」ステータス & 優先度ロジック | ✅ 完了 |
-| タスク内チェックリスト | **Core Implementation**: タスク内チェックリスト | ✅ 完了 |
-| タスクの再編成とトレーサビリティ | **Core Implementation**: タスク再編成 (分割/統合) & **Data Model**: HistoryEvent | ✅ 完了 |
-| タスク間の関連・親子関係 | **Advanced Features**: タスク間の関係性と階層構造 | ✅ 完了（トレーサビリティUI） |
-| 生産性・期間の分析 | **Advanced Features**: 分析と生産性ビュー (TimeLogs活用) | ⏳ 未着手 |
-| カンバン・リスト形式での表示 | **UI/UX Implementation**: カンバンビュー / リストビュー | ⏳ 未着手 |
-| 今日・今週のタスク・リマインダー | **UI/UX Implementation**: ダッシュボード | ⏳ 未着手 |
-| 検索 (タスク名, タグ, 期日) | **UI/UX Implementation**: リストビュー (フィルタ・検索機能) | ⏳ 未着手 |
-| オフライン利用 | **Integrations**: オフラインサポート (Dexie.js + PWA) | ✅ 完了（Dexie.js）<br>⏳ 未着手（PWA） |
-| Markdownエクスポート | **Integrations**: Markdown エクスポート | ⏳ 未着手 |
-| AIによる効率化 | **Integrations**: AI機能の実装 (ローカルLLM) | ⏳ 未着手 |
+1.  **依存関係の追加**
+    -   `npm install reactflow`
+    -   `npm install --save-dev @types/reactflow` (必要であれば)
 
-## 提案アーキテクチャ
+2.  **カスタムフックの実装**
+    -   `src/hooks/useTaskGraph.ts` を作成
+    -   `mode='direct'` のロジックを実装
 
-### データモデル
-- **Task (タスク)**:
-    - `id`: UUID
-    - `title`: 文字列
-    - `description`: 文字列 (Markdown)
-    - `status`: Enum (未着手, 進行中, 保留, 完了, アーカイブ)
-    - `priority`: Enum (低, 中, 高)
-    - `tags`: 配列<文字列>
-    - `dueDate`: ISO 日付
-    - `checklist`: 配列<{id, text, completed}>
-    - `relations`: 配列<{targetId, type: 'parent'|'child'|'related'}>
-    - `history`: 配列<HistoryEvent>
-    - `timeLogs`: 配列<{start, end, type: 'work'|'hold'}> (分析用)
+3.  **コンポーネントの実装**
+    -   `src/components/TaskGraph.tsx` を作成
+    -   カスタムノード `TaskNode` を実装
 
-- **HistoryEvent (トレーサビリティ用)**:
-    - `id`: UUID
-    - `timestamp`: 日付
-    - `type`: 'CREATED' | 'UPDATED' | 'SPLIT_FROM' | 'MERGED_INTO' | 'STATUS_CHANGE'
-    - `details`: JSON (例: "タスクAから分割", "タスクCに統合")
+4.  **UIへの統合**
+    -   `src/components/TaskDetailModal.tsx` にグラフタブを追加
+    -   `TaskGraph` コンポーネントを配置
 
-### 複雑な再編成（多対多）のデータモデル例
-タスクAとBを統合し、さらにタスクCとDに分割して再編成する場合の履歴データの持ち方：
+### 検証手順
 
-1.  **新しいタスク (C, D) の作成**:
-    *   Cの履歴: `{ type: 'SPLIT_FROM', details: { sourceIds: ['A', 'B'] } }`
-    *   Dの履歴: `{ type: 'SPLIT_FROM', details: { sourceIds: ['A', 'B'] } }`
-2.  **古いタスク (A, B) のアーカイブ**:
-    *   Aの履歴: `{ type: 'MERGED_INTO', details: { targetIds: ['C', 'D'] } }`
-    *   Bの履歴: `{ type: 'MERGED_INTO', details: { targetIds: ['C', 'D'] } }`
-
-これにより、Cを見れば「AとBから生まれた」ことがわかり、Aを見れば「CとDになった」ことがわかり、完全なトレーサビリティが保たれます。
-
-### コンポーネント構成
-- **AppShell**: サイドバーとメインコンテンツを持つメインレイアウト。
-- **Views (ビュー)**:
-    - `Dashboard`: 今日、今週、進捗のウィジェット。
-    - `KanbanBoard`: ドラッグ＆ドロップ可能なカンバン。
-    - `TaskListView`: フィルタリングとネスト可能なリスト。
-    - `AnalyticsView`: 時間追跡と生産性のチャート。
-- **TaskDetail**:
-    - 編集可能なフィールド。
-    - 履歴タイムライン (トレーサビリティの可視化)。
-    - 分割/統合アクション。
-    - **トレーサビリティUI機能** (✅ 完了):
-        - **履歴タイムライン**: タスクの作成、ステータス変更、分割、統合の履歴を時系列で表示
-        - **関連タスクリンク**: 親タスク、子タスク、統合関連タスクへのクリック可能なリンク
-        - **親子関係の可視化**: タスク間の関係性を視覚的に表現（アイコン、インデント等）
-
-## 検証計画
-
-### 自動テスト
-- データモデルロジック（特に分割/統合のトレーサビリティ）の単体テスト。
-- 複雑なUI（カンバン、カレンダー）のコンポーネントテスト。
-
-### 手動検証
-- **オフラインテスト**: ネットワークを切断し、タスクを作成/編集し、リロードして再接続する。
-- **トレーサビリティテスト**: タスクAを作成 -> BとCに分割 -> Aがアーカイブされ、B/CがAにリンクしていることを確認。
-- **分析テスト**: タスクを開始、保留、再開、完了する。「活動時間」と「期間」の違いを確認する。
+1.  ビルドとLintチェック (`npm run build`, `npm run lint`)
+2.  ブラウザでの動作確認
+    -   タスク詳細モーダルを開く
+    -   グラフタブが表示されるか
+    -   ノードが表示されるか
+    -   インタラクション（クリック、ドラッグ）が動作するか

@@ -42,14 +42,14 @@ export function TaskHistory({ events }: TaskHistoryProps) {
             case 'CREATED':
                 return 'タスクを作成';
             case 'STATUS_CHANGE':
-                return `ステータス変更: ${event.details?.status || '不明'}`;
+                return `ステータス変更: ${(event.details as { status?: string }).status || '不明'}`;
             case 'SPLIT_FROM':
-                return `タスクから分割 (ID: ${event.details?.sourceId?.substring(0, 8)}...)`;
+                return `タスクから分割 (ID: ${(event.details as { sourceId?: string }).sourceId?.substring(0, 8) || '不明'}...)`;
             case 'MERGED_INTO':
-                if (event.details?.mergedFrom) {
-                    return `${event.details.mergedFrom.length}個のタスクから統合`;
+                if ((event.details as { mergedFrom?: string[] }).mergedFrom) {
+                    return `${(event.details as { mergedFrom: string[] }).mergedFrom.length}個のタスクから統合`;
                 }
-                return `タスクに統合 (ID: ${event.details?.targetId?.substring(0, 8)}...)`;
+                return `タスクに統合 (ID: ${(event.details as { targetId?: string }).targetId?.substring(0, 8) || '不明'}...)`;
             case 'UPDATED':
                 return 'タスクを更新';
             default:

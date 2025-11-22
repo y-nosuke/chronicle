@@ -4,6 +4,7 @@ import { useTaskHistory } from '../hooks/useTaskHistory';
 import { useRelatedTasks } from '../hooks/useRelatedTasks';
 import { TaskHistory } from './TaskHistory';
 import { RelatedTasks } from './RelatedTasks';
+import { TaskGraph } from './TaskGraph';
 
 interface TaskDetailModalProps {
     task: Task | null;
@@ -12,7 +13,7 @@ interface TaskDetailModalProps {
 }
 
 export function TaskDetailModal({ task, onClose, onTaskClick }: TaskDetailModalProps) {
-    const [activeTab, setActiveTab] = useState<'info' | 'history' | 'relations'>('info');
+    const [activeTab, setActiveTab] = useState<'info' | 'history' | 'relations' | 'graph'>('info');
     const history = useTaskHistory(task?.id || null);
     const relatedTasks = useRelatedTasks(task);
 
@@ -21,7 +22,8 @@ export function TaskDetailModal({ task, onClose, onTaskClick }: TaskDetailModalP
     const tabs = [
         { id: 'info' as const, label: '基本情報', icon: '📋' },
         { id: 'history' as const, label: '履歴', icon: '📜' },
-        { id: 'relations' as const, label: '関連タスク', icon: '🔗' }
+        { id: 'relations' as const, label: '関連タスク', icon: '🔗' },
+        { id: 'graph' as const, label: 'グラフ', icon: '🔀' }
     ];
 
     return (
@@ -287,6 +289,17 @@ export function TaskDetailModal({ task, onClose, onTaskClick }: TaskDetailModalP
                                     読み込み中...
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'graph' && (
+                        <div style={{ height: '100%', minHeight: '400px' }}>
+                            <TaskGraph
+                                taskId={task.id}
+                                mode="direct"
+                                onTaskClick={onTaskClick}
+                                compact={true}
+                            />
                         </div>
                     )}
                 </div>

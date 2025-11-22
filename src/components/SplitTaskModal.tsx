@@ -13,6 +13,7 @@ export function SplitTaskModal({ isOpen, onClose, onSubmit }: SplitTaskModalProp
         if (isOpen) {
             setTitles(['', '']);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     if (!isOpen) return null;

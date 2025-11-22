@@ -19,7 +19,7 @@ export interface HistoryEvent {
     taskId: string; // Foreign key to Task
     timestamp: string; // ISO Date
     type: HistoryType;
-    details: any; // JSON object for flexibility
+    details: Record<string, unknown>; // JSON object for flexibility
 }
 
 export interface TimeLog {

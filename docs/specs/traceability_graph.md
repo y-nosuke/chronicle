@@ -98,40 +98,7 @@
    - ズーム/パン → グラフの表示範囲を調整
    - フィルタリング → 表示するタスクを絞り込み
 
-## 実装するファイル
 
-### カスタムフック
-
-#### [NEW] [useTaskGraph.ts](file:///c:/Users/yoichi/.gemini/antigravity/scratch/chronicle/src/hooks/useTaskGraph.ts)
-- タスクデータからグラフデータ（nodes, edges）を生成
-- 3つのモード（direct, recursive, all）をサポート
-- 表示期間フィルタリング
-
-### コンポーネント
-
-#### [NEW] [TaskGraph.tsx](file:///c:/Users/yoichi/.gemini/antigravity/scratch/chronicle/src/components/TaskGraph.tsx)
-- React Flowを使用したグラフ表示コンポーネント
-- カスタムノードコンポーネント
-- カスタムエッジコンポーネント
-- ズーム、パン、ミニマップ機能
-
-#### [NEW] [GraphView.tsx](file:///c:/Users/yoichi/.gemini/antigravity/scratch/chronicle/src/components/GraphView.tsx)
-- 専用グラフビュー（モード2）
-- ツールバー（ズーム、フィルター）
-- タスク選択UI
-
-#### [NEW] [MainGraphView.tsx](file:///c:/Users/yoichi/.gemini/antigravity/scratch/chronicle/src/components/MainGraphView.tsx)
-- メイン画面のグラフビュー（モード3）
-- 期間選択UI
-- フィルタリングUI
-
-#### [MODIFY] [TaskDetailModal.tsx](file:///c:/Users/yoichi/.gemini/antigravity/scratch/chronicle/src/components/TaskDetailModal.tsx)
-- 新しいタブ「グラフ」を追加
-- `TaskGraph`コンポーネントを統合（directモード）
-
-#### [MODIFY] [App.tsx](file:///c:/Users/yoichi/.gemini/antigravity/scratch/chronicle/src/App.tsx)
-- グラフビューへのナビゲーション追加
-- ビュー切り替え機能
 
 ## 非機能要件
 
