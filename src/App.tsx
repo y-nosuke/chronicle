@@ -3,7 +3,7 @@ import { useTasks } from './hooks/useTasks';
 import { TaskPriority } from './types/task';
 
 function App() {
-  const { tasks, addTask, updateTaskStatus, deleteTask } = useTasks();
+  const { tasks, addTask, updateTaskStatus, deleteTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem } = useTasks();
   const [input, setInput] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
 
@@ -81,108 +81,189 @@ function App() {
               boxShadow: 'var(--shadow-sm)',
               borderLeft: `4px solid ${getPriorityColor(task.priority)}`,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+              flexDirection: 'column'
             }}
           >
-            <div>
-              <h3 style={{ fontWeight: 'bold', marginBottom: 'var(--space-1)' }}>{task.title}</h3>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                <span style={{
-                  fontSize: 'var(--text-xs)',
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: task.status === 'done' ? 'var(--color-status-done)' :
-                    task.status === 'hold' ? 'var(--color-status-hold)' :
-                      task.status === 'inprogress' ? 'var(--color-status-inprogress)' :
-                        'var(--color-status-todo)',
-                  color: 'white'
-                }}>
-                  {task.status}
-                </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                  {task.priority}
-                </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontWeight: 'bold', marginBottom: 'var(--space-1)' }}>{task.title}</h3>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <span style={{
+                    fontSize: 'var(--text-xs)',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: task.status === 'done' ? 'var(--color-status-done)' :
+                      task.status === 'hold' ? 'var(--color-status-hold)' :
+                        task.status === 'inprogress' ? 'var(--color-status-inprogress)' :
+                          'var(--color-status-todo)',
+                    color: 'white'
+                  }}>
+                    {task.status}
+                  </span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                    {task.priority}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                {task.status === 'todo' && (
+                  <button
+                    onClick={() => updateTaskStatus(task.id, 'inprogress')}
+                    style={{
+                      padding: 'var(--space-2) var(--space-4)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-status-inprogress)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-status-inprogress)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    Start
+                  </button>
+                )}
+                {task.status === 'inprogress' && (
+                  <button
+                    onClick={() => updateTaskStatus(task.id, 'hold')}
+                    style={{
+                      padding: 'var(--space-2) var(--space-4)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-status-hold)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-status-hold)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    Hold
+                  </button>
+                )}
+                {task.status === 'hold' && (
+                  <button
+                    onClick={() => updateTaskStatus(task.id, 'inprogress')}
+                    style={{
+                      padding: 'var(--space-2) var(--space-4)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-status-inprogress)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-status-inprogress)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    Resume
+                  </button>
+                )}
+                {task.status !== 'done' && (
+                  <button
+                    onClick={() => updateTaskStatus(task.id, 'done')}
+                    style={{
+                      padding: 'var(--space-2) var(--space-4)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-status-done)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-status-done)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    Done
+                  </button>
+                )}
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  style={{
+                    padding: 'var(--space-2) var(--space-4)',
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'transparent',
+                    border: 'none'
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              {task.status === 'todo' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'inprogress')}
-                  style={{
-                    padding: 'var(--space-2) var(--space-4)',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-status-inprogress)',
-                    backgroundColor: 'transparent',
-                    border: '1px solid var(--color-status-inprogress)',
-                    borderRadius: 'var(--radius-md)'
+
+            {/* Checklist Section */}
+            <div style={{
+              marginTop: 'var(--space-2)',
+              paddingTop: 'var(--space-2)',
+              borderTop: '1px solid var(--color-border)',
+              paddingLeft: 'var(--space-4)',
+              paddingRight: 'var(--space-4)',
+              paddingBottom: 'var(--space-4)'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                {task.checklist.map(item => (
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <input
+                      type="checkbox"
+                      checked={item.completed}
+                      onChange={() => toggleChecklistItem(task.id, item.id)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{
+                      textDecoration: item.completed ? 'line-through' : 'none',
+                      color: item.completed ? 'var(--color-text-muted)' : 'var(--color-text-main)',
+                      fontSize: 'var(--text-sm)'
+                    }}>
+                      {item.text}
+                    </span>
+                    <button
+                      onClick={() => deleteChecklistItem(task.id, item.id)}
+                      style={{
+                        marginLeft: 'auto',
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-text-muted)',
+                        border: 'none',
+                        background: 'none'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const input = form.elements.namedItem('checklistInput') as HTMLInputElement;
+                    if (input.value.trim()) {
+                      addChecklistItem(task.id, input.value);
+                      input.value = '';
+                    }
                   }}
+                  style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}
                 >
-                  Start
-                </button>
-              )}
-              {task.status === 'inprogress' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'hold')}
-                  style={{
-                    padding: 'var(--space-2) var(--space-4)',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-status-hold)',
-                    backgroundColor: 'transparent',
-                    border: '1px solid var(--color-status-hold)',
-                    borderRadius: 'var(--radius-md)'
-                  }}
-                >
-                  Hold
-                </button>
-              )}
-              {task.status === 'hold' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'inprogress')}
-                  style={{
-                    padding: 'var(--space-2) var(--space-4)',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-status-inprogress)',
-                    backgroundColor: 'transparent',
-                    border: '1px solid var(--color-status-inprogress)',
-                    borderRadius: 'var(--radius-md)'
-                  }}
-                >
-                  Resume
-                </button>
-              )}
-              {task.status !== 'done' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'done')}
-                  style={{
-                    padding: 'var(--space-2) var(--space-4)',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-status-done)',
-                    backgroundColor: 'transparent',
-                    border: '1px solid var(--color-status-done)',
-                    borderRadius: 'var(--radius-md)'
-                  }}
-                >
-                  Done
-                </button>
-              )}
-              <button
-                onClick={() => deleteTask(task.id)}
-                style={{
-                  padding: 'var(--space-2) var(--space-4)',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--color-text-muted)',
-                  backgroundColor: 'transparent',
-                  border: 'none'
-                }}
-              >
-                Delete
-              </button>
+                  <input
+                    name="checklistInput"
+                    type="text"
+                    placeholder="Add subtask..."
+                    style={{
+                      flex: 1,
+                      padding: 'var(--space-1) var(--space-2)',
+                      fontSize: 'var(--text-sm)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      padding: 'var(--space-1) var(--space-2)',
+                      backgroundColor: 'var(--color-bg-surface-hover)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                  >
+                    Add
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
+        ))
+        }
+      </div >
+    </div >
   );
 }
 

@@ -45,15 +45,44 @@ export function useTasks() {
 
     const deleteTask = async (id: string) => {
         await db.tasks.delete(id);
-        // We might want to keep history or archive instead of delete, 
-        // but for now hard delete is fine for "Delete" action. 
-        // "Archive" should be a status change.
+    };
+
+    const addChecklistItem = async (taskId: string, text: string) => {
+        const task = await db.tasks.get(taskId);
+        if (!task) return;
+
+        const newItem = { id: uuidv4(), text, completed: false };
+        const updatedChecklist = [...task.checklist, newItem];
+
+        await db.tasks.update(taskId, { checklist: updatedChecklist, updatedAt: new Date().toISOString() });
+    };
+
+    const toggleChecklistItem = async (taskId: string, itemId: string) => {
+        const task = await db.tasks.get(taskId);
+        if (!task) return;
+
+        const updatedChecklist = task.checklist.map(item =>
+            item.id === itemId ? { ...item, completed: !item.completed } : item
+        );
+
+        await db.tasks.update(taskId, { checklist: updatedChecklist, updatedAt: new Date().toISOString() });
+    };
+
+    const deleteChecklistItem = async (taskId: string, itemId: string) => {
+        const task = await db.tasks.get(taskId);
+        if (!task) return;
+
+        const updatedChecklist = task.checklist.filter(item => item.id !== itemId);
+        await db.tasks.update(taskId, { checklist: updatedChecklist, updatedAt: new Date().toISOString() });
     };
 
     return {
         tasks,
         addTask,
         updateTaskStatus,
-        deleteTask
+        deleteTask,
+        addChecklistItem,
+        toggleChecklistItem,
+        deleteChecklistItem
     };
 }
