@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Task } from '../types/task';
 import { useTaskHistory } from '../hooks/useTaskHistory';
 import { useRelatedTasks } from '../hooks/useRelatedTasks';
@@ -16,6 +17,7 @@ export function TaskDetailModal({ task, onClose, onTaskClick }: TaskDetailModalP
     const [activeTab, setActiveTab] = useState<'info' | 'history' | 'relations' | 'graph'>('info');
     const history = useTaskHistory(task?.id || null);
     const relatedTasks = useRelatedTasks(task);
+    const navigate = useNavigate();
 
     if (!task) return null;
 
@@ -293,13 +295,35 @@ export function TaskDetailModal({ task, onClose, onTaskClick }: TaskDetailModalP
                     )}
 
                     {activeTab === 'graph' && (
-                        <div style={{ height: '100%', minHeight: '400px' }}>
-                            <TaskGraph
-                                taskId={task.id}
-                                mode="direct"
-                                onTaskClick={onTaskClick}
-                                compact={true}
-                            />
+                        <div style={{ height: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ marginBottom: 'var(--space-4)', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={() => {
+                                        onClose();
+                                        navigate(`/graph/${task.id}`);
+                                    }}
+                                    style={{
+                                        padding: 'var(--space-2) var(--space-4)',
+                                        backgroundColor: 'var(--color-primary)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: 'var(--radius-md)',
+                                        cursor: 'pointer',
+                                        fontSize: 'var(--text-sm)',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    View Full Graph
+                                </button>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <TaskGraph
+                                    taskId={task.id}
+                                    mode="direct"
+                                    onTaskClick={onTaskClick}
+                                    compact={true}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

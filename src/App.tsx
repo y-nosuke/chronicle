@@ -1,11 +1,14 @@
+
 import { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { useTasks } from './hooks/useTasks';
 import type { TaskPriority, Task } from './types/task';
 import { Modal } from './components/Modal';
 import { SplitTaskModal } from './components/SplitTaskModal';
 import { TaskDetailModal } from './components/TaskDetailModal';
+import { TaskGraphPage } from './pages/TaskGraphPage';
 
-function App() {
+function TaskList() {
   const { tasks, addTask, updateTaskStatus, deleteTask, restoreTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem, splitTask, mergeTasks } = useTasks();
   const [input, setInput] = useState('');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -240,7 +243,7 @@ function App() {
               backgroundColor: 'var(--color-bg-surface)',
               borderRadius: 'var(--radius-md)',
               boxShadow: 'var(--shadow-sm)',
-              borderLeft: `4px solid ${getPriorityColor(task.priority)}`,
+              borderLeft: `4px solid ${getPriorityColor(task.priority)} `,
               display: 'flex',
               flexDirection: 'column',
               opacity: task.status === 'done' ? 0.6 : 1
@@ -430,7 +433,7 @@ function App() {
                         textDecoration: item.completed ? 'line-through' : 'none',
                         color: item.completed ? 'var(--color-text-muted)' : 'var(--color-text-main)',
                         fontSize: 'var(--text-sm)',
-                        opacity: task.status === 'done' ? 0.7 : 1
+                        opacity: task.status === 'done' ? 'var(--color-text-muted)' : 'var(--color-text-main)'
                       }}>
                         {item.text}
                       </span>
@@ -507,4 +510,14 @@ function App() {
   );
 }
 
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<TaskList />} />
+      <Route path="/graph/:taskId" element={<TaskGraphPage />} />
+    </Routes>
+  );
+}
+
 export default App;
+

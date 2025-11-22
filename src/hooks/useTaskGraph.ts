@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { type Node, type Edge, Position } from 'reactflow';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db/db';
 import { useRelatedTasks } from './useRelatedTasks';
 import type { Task } from '../types/task';
 
@@ -35,12 +37,22 @@ export function useTaskGraph(
 ): UseTaskGraphResult {
     const relatedTasks = useRelatedTasks(task);
 
+    // Fetch all data for recursive mode
+    const allData = useLiveQuery(async () => {
+        if (mode !== 'recursive' || !task) return null;
+        const tasks = await db.tasks.toArray();
+        const history = await db.history
+            .filter(h => ['SPLIT_FROM', 'STATUS_CHANGE', 'MERGED_INTO'].includes(h.type))
+            .toArray();
+        return { tasks, history };
+    }, [mode, task?.id]);
+
     const { nodes, edges } = useMemo(() => {
-        if (!task || !relatedTasks) {
+        if (!task) {
             return { nodes: [], edges: [] };
         }
 
-        if (mode === 'direct') {
+        if (mode === 'direct' && relatedTasks) {
             const newNodes: GraphNode[] = [];
             const newEdges: GraphEdge[] = [];
 
@@ -80,7 +92,6 @@ export function useTaskGraph(
             });
 
             // Merged From Tasks
-            // Adjust Y if we have both parents and merged from (stack them)
             const mergedFromOffset = relatedTasks.parentTasks.length > 0 ? relatedTasks.parentTasks.length * leftSpacing : 0;
 
             relatedTasks.mergedFromTasks.forEach((mergedFrom, index) => {
@@ -99,7 +110,7 @@ export function useTaskGraph(
                     target: task.id,
                     type: 'default',
                     animated: true,
-                    label: 'Merged',
+                    label: 'Merge',
                     data: { relationType: 'merge' }
                 });
             });
@@ -132,14 +143,11 @@ export function useTaskGraph(
             // Merged Into Task
             if (relatedTasks.mergedIntoTask) {
                 const mergedInto = relatedTasks.mergedIntoTask;
-                // If we have children, place mergedInto below them
-                const mergedIntoY = relatedTasks.childTasks.length > 0 ? relatedTasks.childTasks.length * rightSpacing : 0;
-
                 newNodes.push({
                     id: mergedInto.id,
                     type: 'taskNode',
                     data: { task: mergedInto, label: mergedInto.title, isCurrent: false },
-                    position: { x: 300, y: mergedIntoY },
+                    position: { x: 300, y: 0 }, // Assuming only one merged into, center it
                     sourcePosition: Position.Right,
                     targetPosition: Position.Left,
                 });
@@ -149,18 +157,171 @@ export function useTaskGraph(
                     target: mergedInto.id,
                     type: 'default',
                     animated: true,
-                    label: 'Merged',
+                    label: 'Merge',
                     data: { relationType: 'merge' }
                 });
             }
 
             return { nodes: newNodes, edges: newEdges };
+
+        } else if (mode === 'recursive' && allData) {
+            const { tasks, history } = allData;
+            const taskMap = new Map(tasks.map(t => [t.id, t]));
+            const adj = new Map<string, { target: string, type: EdgeType }[]>();
+            const revAdj = new Map<string, { source: string, type: EdgeType }[]>();
+
+            // Build adjacency graph from history
+            history.forEach(h => {
+                if (h.type === 'SPLIT_FROM') {
+                    const childId = h.taskId;
+                    const parentId = h.details?.sourceId as string;
+                    if (parentId && childId) {
+                        if (!adj.has(parentId)) adj.set(parentId, []);
+                        adj.get(parentId)!.push({ target: childId, type: 'split' });
+                        if (!revAdj.has(childId)) revAdj.set(childId, []);
+                        revAdj.get(childId)!.push({ source: parentId, type: 'split' });
+                    }
+                } else if (h.type === 'STATUS_CHANGE' && h.details?.splitInto) {
+                    const parentId = h.taskId;
+                    const childIds = h.details.splitInto as string[];
+                    childIds.forEach(childId => {
+                        if (!adj.has(parentId)) adj.set(parentId, []);
+                        adj.get(parentId)!.push({ target: childId, type: 'split' });
+                        if (!revAdj.has(childId)) revAdj.set(childId, []);
+                        revAdj.get(childId)!.push({ source: parentId, type: 'split' });
+                    });
+                } else if (h.type === 'MERGED_INTO') {
+                    if (h.details?.mergedFrom) {
+                        const targetId = h.taskId;
+                        const sourceIds = h.details.mergedFrom as string[];
+                        sourceIds.forEach(sourceId => {
+                            if (!adj.has(sourceId)) adj.set(sourceId, []);
+                            adj.get(sourceId)!.push({ target: targetId, type: 'merge' });
+                            if (!revAdj.has(targetId)) revAdj.set(targetId, []);
+                            revAdj.get(targetId)!.push({ source: sourceId, type: 'merge' });
+                        });
+                    } else if (h.details?.targetId) {
+                        const sourceId = h.taskId;
+                        const targetId = h.details.targetId as string;
+                        if (!adj.has(sourceId)) adj.set(sourceId, []);
+                        adj.get(sourceId)!.push({ target: targetId, type: 'merge' });
+                        if (!revAdj.has(targetId)) revAdj.set(targetId, []);
+                        revAdj.get(targetId)!.push({ source: sourceId, type: 'merge' });
+                    }
+                }
+            });
+
+            // BFS to find all connected nodes
+            const visited = new Set<string>();
+            const queue = [task.id];
+            visited.add(task.id);
+
+            while (queue.length > 0) {
+                const currentId = queue.shift()!;
+
+                // Forward connections
+                if (adj.has(currentId)) {
+                    adj.get(currentId)!.forEach(edge => {
+                        if (!visited.has(edge.target)) {
+                            visited.add(edge.target);
+                            queue.push(edge.target);
+                        }
+                    });
+                }
+
+                // Backward connections
+                if (revAdj.has(currentId)) {
+                    revAdj.get(currentId)!.forEach(edge => {
+                        if (!visited.has(edge.source)) {
+                            visited.add(edge.source);
+                            queue.push(edge.source);
+                        }
+                    });
+                }
+            }
+
+            // Assign levels (BFS from task.id again, but this time for levels)
+            const levels = new Map<string, number>();
+            levels.set(task.id, 0);
+            const levelQueue = [task.id];
+            const levelVisited = new Set<string>();
+            levelVisited.add(task.id);
+
+            while (levelQueue.length > 0) {
+                const currentId = levelQueue.shift()!;
+                const currentLevel = levels.get(currentId)!;
+
+                if (adj.has(currentId)) {
+                    adj.get(currentId)!.forEach(edge => {
+                        if (!levelVisited.has(edge.target)) {
+                            levels.set(edge.target, currentLevel + 1);
+                            levelVisited.add(edge.target);
+                            levelQueue.push(edge.target);
+                        }
+                    });
+                }
+                if (revAdj.has(currentId)) {
+                    revAdj.get(currentId)!.forEach(edge => {
+                        if (!levelVisited.has(edge.source)) {
+                            levels.set(edge.source, currentLevel - 1);
+                            levelVisited.add(edge.source);
+                            levelQueue.push(edge.source);
+                        }
+                    });
+                }
+            }
+
+            // Generate nodes and edges
+            const newNodes: GraphNode[] = [];
+            const newEdges: GraphEdge[] = [];
+            const levelGroups = new Map<number, string[]>();
+
+            visited.forEach(id => {
+                const level = levels.get(id) || 0;
+                if (!levelGroups.has(level)) levelGroups.set(level, []);
+                levelGroups.get(level)!.push(id);
+            });
+
+            levelGroups.forEach((ids, level) => {
+                ids.forEach((id, index) => {
+                    const t = taskMap.get(id);
+                    if (t) {
+                        newNodes.push({
+                            id: t.id,
+                            type: 'taskNode',
+                            data: { task: t, label: t.title, isCurrent: t.id === task.id },
+                            position: { x: level * 300, y: index * 100 },
+                            sourcePosition: Position.Right,
+                            targetPosition: Position.Left,
+                        });
+                    }
+                });
+            });
+
+            // Generate edges for visited nodes
+            visited.forEach(sourceId => {
+                if (adj.has(sourceId)) {
+                    adj.get(sourceId)!.forEach(edge => {
+                        if (visited.has(edge.target)) {
+                            newEdges.push({
+                                id: `${sourceId}-${edge.target}`,
+                                source: sourceId,
+                                target: edge.target,
+                                type: 'default',
+                                animated: true,
+                                label: edge.type === 'split' ? 'Split' : 'Merge',
+                                data: { relationType: edge.type }
+                            });
+                        }
+                    });
+                }
+            });
+
+            return { nodes: newNodes, edges: newEdges };
         }
 
         return { nodes: [], edges: [] };
-    }, [task, relatedTasks, mode]);
+    }, [task, mode, relatedTasks, allData]);
 
-    const loading = !!task && !relatedTasks;
-
-    return { nodes, edges, loading };
+    return { nodes, edges, loading: !task || (mode === 'recursive' && !allData) };
 }
