@@ -7,6 +7,7 @@ import { Modal } from './components/Modal';
 import { SplitTaskModal } from './components/SplitTaskModal';
 import { TaskDetailModal } from './components/TaskDetailModal';
 import { TaskGraphPage } from './pages/TaskGraphPage';
+import { AllTasksGraph } from './components/AllTasksGraph';
 
 function TaskList() {
   const { tasks, addTask, updateTaskStatus, deleteTask, restoreTask, addChecklistItem, toggleChecklistItem, deleteChecklistItem, splitTask, mergeTasks } = useTasks();
@@ -22,6 +23,9 @@ function TaskList() {
 
   // Undo state
   const [deletedTask, setDeletedTask] = useState<{ id: string, title: string } | null>(null);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,23 +168,41 @@ function TaskList() {
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold', marginBottom: 'var(--space-2)' }}>Chronicle</h1>
           <p style={{ color: 'var(--color-text-secondary)' }}>Task Management Reimagined</p>
         </div>
-        <button
-          onClick={() => {
-            setIsSelectionMode(!isSelectionMode);
-            setSelectedTaskIds(new Set());
-          }}
-          style={{
-            padding: 'var(--space-2) var(--space-4)',
-            fontSize: 'var(--text-sm)',
-            backgroundColor: isSelectionMode ? 'var(--color-text-main)' : 'transparent',
-            color: isSelectionMode ? 'var(--color-bg-app)' : 'var(--color-text-main)',
-            border: '1px solid var(--color-text-main)',
-            borderRadius: 'var(--radius-md)',
-            cursor: 'pointer'
-          }}
-        >
-          {isSelectionMode ? 'Cancel Selection' : 'Select Tasks'}
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <button
+            onClick={() => setViewMode(viewMode === 'list' ? 'graph' : 'list')}
+            style={{
+              padding: 'var(--space-2) var(--space-4)',
+              fontSize: 'var(--text-sm)',
+              backgroundColor: viewMode === 'graph' ? 'var(--color-primary)' : 'transparent',
+              color: viewMode === 'graph' ? 'white' : 'var(--color-text-main)',
+              border: `1px solid ${viewMode === 'graph' ? 'var(--color-primary)' : 'var(--color-text-main)'}`,
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer'
+            }}
+          >
+            {viewMode === 'list' ? '📊 グラフビュー' : '📋 リストビュー'}
+          </button>
+          {viewMode === 'list' && (
+            <button
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                setSelectedTaskIds(new Set());
+              }}
+              style={{
+                padding: 'var(--space-2) var(--space-4)',
+                fontSize: 'var(--text-sm)',
+                backgroundColor: isSelectionMode ? 'var(--color-text-main)' : 'transparent',
+                color: isSelectionMode ? 'var(--color-bg-app)' : 'var(--color-text-main)',
+                border: '1px solid var(--color-text-main)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer'
+              }}
+            >
+              {isSelectionMode ? 'Cancel Selection' : 'Select Tasks'}
+            </button>
+          )}
+        </div>
       </header>
 
       {isSelectionMode && (
@@ -234,278 +256,286 @@ function TaskList() {
         </form>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        {tasks?.map((task) => (
-          <div
-            key={task.id}
-            style={{
-              padding: 'var(--space-4)',
-              backgroundColor: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-sm)',
-              borderLeft: `4px solid ${getPriorityColor(task.priority)} `,
-              display: 'flex',
-              flexDirection: 'column',
-              opacity: task.status === 'done' ? 0.6 : 1
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                {isSelectionMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedTaskIds.has(task.id)}
-                    onChange={() => toggleSelection(task.id)}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                )}
-                <div>
-                  <h3 style={{ fontWeight: 'bold', marginBottom: 'var(--space-1)', textDecoration: task.status === 'done' ? 'line-through' : 'none' }}>{task.title}</h3>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                    <span style={{
-                      fontSize: 'var(--text-xs)',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)',
-                      backgroundColor: task.status === 'done' ? 'var(--color-status-done)' :
-                        task.status === 'hold' ? 'var(--color-status-hold)' :
-                          task.status === 'inprogress' ? 'var(--color-status-inprogress)' :
-                            'var(--color-status-todo)',
-                      color: 'white'
-                    }}>
-                      {task.status}
-                    </span>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                      {task.priority}
-                    </span>
+      {/* Graph View */}
+      {viewMode === 'graph' ? (
+        <div style={{ height: 'calc(100vh - 200px)' }}>
+          <AllTasksGraph onTaskClick={(taskId) => setDetailTaskId(taskId)} />
+        </div>
+      ) : (
+        /* List View */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {tasks?.map((task) => (
+            <div
+              key={task.id}
+              style={{
+                padding: 'var(--space-4)',
+                backgroundColor: 'var(--color-bg-surface)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: 'var(--shadow-sm)',
+                borderLeft: `4px solid ${getPriorityColor(task.priority)} `,
+                display: 'flex',
+                flexDirection: 'column',
+                opacity: task.status === 'done' ? 0.6 : 1
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  {isSelectionMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedTaskIds.has(task.id)}
+                      onChange={() => toggleSelection(task.id)}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    />
+                  )}
+                  <div>
+                    <h3 style={{ fontWeight: 'bold', marginBottom: 'var(--space-1)', textDecoration: task.status === 'done' ? 'line-through' : 'none' }}>{task.title}</h3>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: 'var(--text-xs)',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        backgroundColor: task.status === 'done' ? 'var(--color-status-done)' :
+                          task.status === 'hold' ? 'var(--color-status-hold)' :
+                            task.status === 'inprogress' ? 'var(--color-status-inprogress)' :
+                              'var(--color-status-todo)',
+                        color: 'white'
+                      }}>
+                        {task.status}
+                      </span>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                        {task.priority}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {!isSelectionMode && (
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                  <button
-                    onClick={() => setDetailTaskId(task.id)}
-                    style={{
-                      padding: 'var(--space-2) var(--space-4)',
-                      fontSize: 'var(--text-sm)',
-                      color: 'var(--color-primary)',
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--color-primary)',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    詳細
-                  </button>
-                  {task.status === 'todo' && (
+                {!isSelectionMode && (
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                     <button
-                      onClick={() => updateTaskStatus(task.id, 'inprogress')}
+                      onClick={() => setDetailTaskId(task.id)}
                       style={{
                         padding: 'var(--space-2) var(--space-4)',
                         fontSize: 'var(--text-sm)',
-                        color: 'var(--color-status-inprogress)',
+                        color: 'var(--color-primary)',
                         backgroundColor: 'transparent',
-                        border: '1px solid var(--color-status-inprogress)',
-                        borderRadius: 'var(--radius-md)'
+                        border: '1px solid var(--color-primary)',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
                       }}
                     >
-                      Start
+                      詳細
                     </button>
-                  )}
-                  {task.status === 'inprogress' && (
-                    <button
-                      onClick={() => updateTaskStatus(task.id, 'hold')}
-                      style={{
-                        padding: 'var(--space-2) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        color: 'var(--color-status-hold)',
-                        backgroundColor: 'transparent',
-                        border: '1px solid var(--color-status-hold)',
-                        borderRadius: 'var(--radius-md)'
-                      }}
-                    >
-                      Hold
-                    </button>
-                  )}
-                  {task.status === 'hold' && (
-                    <button
-                      onClick={() => updateTaskStatus(task.id, 'inprogress')}
-                      style={{
-                        padding: 'var(--space-2) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        color: 'var(--color-status-inprogress)',
-                        backgroundColor: 'transparent',
-                        border: '1px solid var(--color-status-inprogress)',
-                        borderRadius: 'var(--radius-md)'
-                      }}
-                    >
-                      Resume
-                    </button>
-                  )}
-                  {task.status === 'done' && (
-                    <button
-                      onClick={() => updateTaskStatus(task.id, 'inprogress')}
-                      style={{
-                        padding: 'var(--space-2) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        color: 'var(--color-status-inprogress)',
-                        backgroundColor: 'transparent',
-                        border: '1px solid var(--color-status-inprogress)',
-                        borderRadius: 'var(--radius-md)'
-                      }}
-                    >
-                      Resume
-                    </button>
-                  )}
-                  {task.status !== 'done' && (
-                    <>
+                    {task.status === 'todo' && (
                       <button
-                        onClick={() => handleDone(task)}
+                        onClick={() => updateTaskStatus(task.id, 'inprogress')}
                         style={{
                           padding: 'var(--space-2) var(--space-4)',
                           fontSize: 'var(--text-sm)',
-                          color: 'var(--color-status-done)',
+                          color: 'var(--color-status-inprogress)',
                           backgroundColor: 'transparent',
-                          border: '1px solid var(--color-status-done)',
+                          border: '1px solid var(--color-status-inprogress)',
                           borderRadius: 'var(--radius-md)'
                         }}
                       >
-                        Done
+                        Start
                       </button>
+                    )}
+                    {task.status === 'inprogress' && (
                       <button
-                        onClick={() => {
-                          setSplitTaskId(task.id);
-                          setSplitModalOpen(true);
-                        }}
+                        onClick={() => updateTaskStatus(task.id, 'hold')}
                         style={{
                           padding: 'var(--space-2) var(--space-4)',
                           fontSize: 'var(--text-sm)',
-                          color: 'var(--color-text-main)',
+                          color: 'var(--color-status-hold)',
                           backgroundColor: 'transparent',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius-md)',
-                          cursor: 'pointer'
+                          border: '1px solid var(--color-status-hold)',
+                          borderRadius: 'var(--radius-md)'
                         }}
                       >
-                        Split
+                        Hold
                       </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => handleDelete(task.id, task.title)}
-                    style={{
-                      padding: 'var(--space-2) var(--space-4)',
-                      fontSize: 'var(--text-sm)',
-                      color: '#ef4444', // Explicit red for visibility
-                      backgroundColor: 'transparent',
-                      border: '1px solid #ef4444',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Delete
-                  </button>
+                    )}
+                    {task.status === 'hold' && (
+                      <button
+                        onClick={() => updateTaskStatus(task.id, 'inprogress')}
+                        style={{
+                          padding: 'var(--space-2) var(--space-4)',
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--color-status-inprogress)',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-status-inprogress)',
+                          borderRadius: 'var(--radius-md)'
+                        }}
+                      >
+                        Resume
+                      </button>
+                    )}
+                    {task.status === 'done' && (
+                      <button
+                        onClick={() => updateTaskStatus(task.id, 'inprogress')}
+                        style={{
+                          padding: 'var(--space-2) var(--space-4)',
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--color-status-inprogress)',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-status-inprogress)',
+                          borderRadius: 'var(--radius-md)'
+                        }}
+                      >
+                        Resume
+                      </button>
+                    )}
+                    {task.status !== 'done' && (
+                      <>
+                        <button
+                          onClick={() => handleDone(task)}
+                          style={{
+                            padding: 'var(--space-2) var(--space-4)',
+                            fontSize: 'var(--text-sm)',
+                            color: 'var(--color-status-done)',
+                            backgroundColor: 'transparent',
+                            border: '1px solid var(--color-status-done)',
+                            borderRadius: 'var(--radius-md)'
+                          }}
+                        >
+                          Done
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSplitTaskId(task.id);
+                            setSplitModalOpen(true);
+                          }}
+                          style={{
+                            padding: 'var(--space-2) var(--space-4)',
+                            fontSize: 'var(--text-sm)',
+                            color: 'var(--color-text-main)',
+                            backgroundColor: 'transparent',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Split
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => handleDelete(task.id, task.title)}
+                      style={{
+                        padding: 'var(--space-2) var(--space-4)',
+                        fontSize: 'var(--text-sm)',
+                        color: '#ef4444', // Explicit red for visibility
+                        backgroundColor: 'transparent',
+                        border: '1px solid #ef4444',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Checklist Section */}
+              {!isSelectionMode && (
+                <div style={{
+                  marginTop: 'var(--space-2)',
+                  paddingTop: 'var(--space-2)',
+                  borderTop: '1px solid var(--color-border)',
+                  paddingLeft: 'var(--space-4)',
+                  paddingRight: 'var(--space-4)',
+                  paddingBottom: 'var(--space-4)'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                    {task.checklist.map(item => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
+                          onChange={() => toggleChecklistItem(task.id, item.id)}
+                          disabled={task.status === 'done'}
+                          style={{ cursor: task.status === 'done' ? 'not-allowed' : 'pointer' }}
+                        />
+                        <span style={{
+                          textDecoration: item.completed ? 'line-through' : 'none',
+                          color: item.completed ? 'var(--color-text-muted)' : 'var(--color-text-main)',
+                          fontSize: 'var(--text-sm)',
+                          opacity: task.status === 'done' ? 'var(--color-text-muted)' : 'var(--color-text-main)'
+                        }}>
+                          {item.text}
+                        </span>
+                        {task.status !== 'done' && (
+                          <button
+                            onClick={() => deleteChecklistItem(task.id, item.id)}
+                            style={{
+                              marginLeft: 'auto',
+                              fontSize: 'var(--text-lg)', // Larger icon
+                              padding: 'var(--space-1) var(--space-2)', // More hit area
+                              color: 'var(--color-text-muted)',
+                              border: 'none',
+                              background: 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {task.status !== 'done' && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const form = e.target as HTMLFormElement;
+                          const input = form.elements.namedItem('checklistInput') as HTMLInputElement;
+                          if (input.value.trim()) {
+                            addChecklistItem(task.id, input.value);
+                            input.value = '';
+                          }
+                        }}
+                        style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}
+                      >
+                        <input
+                          name="checklistInput"
+                          type="text"
+                          placeholder="Add subtask..."
+                          style={{
+                            flex: 1,
+                            padding: 'var(--space-1) var(--space-2)',
+                            fontSize: 'var(--text-sm)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-sm)'
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          style={{
+                            fontSize: 'var(--text-xs)',
+                            padding: 'var(--space-1) var(--space-3)',
+                            backgroundColor: 'var(--color-primary)', // Primary color for visibility
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Add
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-
-            {/* Checklist Section */}
-            {!isSelectionMode && (
-              <div style={{
-                marginTop: 'var(--space-2)',
-                paddingTop: 'var(--space-2)',
-                borderTop: '1px solid var(--color-border)',
-                paddingLeft: 'var(--space-4)',
-                paddingRight: 'var(--space-4)',
-                paddingBottom: 'var(--space-4)'
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  {task.checklist.map(item => (
-                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <input
-                        type="checkbox"
-                        checked={item.completed}
-                        onChange={() => toggleChecklistItem(task.id, item.id)}
-                        disabled={task.status === 'done'}
-                        style={{ cursor: task.status === 'done' ? 'not-allowed' : 'pointer' }}
-                      />
-                      <span style={{
-                        textDecoration: item.completed ? 'line-through' : 'none',
-                        color: item.completed ? 'var(--color-text-muted)' : 'var(--color-text-main)',
-                        fontSize: 'var(--text-sm)',
-                        opacity: task.status === 'done' ? 'var(--color-text-muted)' : 'var(--color-text-main)'
-                      }}>
-                        {item.text}
-                      </span>
-                      {task.status !== 'done' && (
-                        <button
-                          onClick={() => deleteChecklistItem(task.id, item.id)}
-                          style={{
-                            marginLeft: 'auto',
-                            fontSize: 'var(--text-lg)', // Larger icon
-                            padding: 'var(--space-1) var(--space-2)', // More hit area
-                            color: 'var(--color-text-muted)',
-                            border: 'none',
-                            background: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {task.status !== 'done' && (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const form = e.target as HTMLFormElement;
-                        const input = form.elements.namedItem('checklistInput') as HTMLInputElement;
-                        if (input.value.trim()) {
-                          addChecklistItem(task.id, input.value);
-                          input.value = '';
-                        }
-                      }}
-                      style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}
-                    >
-                      <input
-                        name="checklistInput"
-                        type="text"
-                        placeholder="Add subtask..."
-                        style={{
-                          flex: 1,
-                          padding: 'var(--space-1) var(--space-2)',
-                          fontSize: 'var(--text-sm)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius-sm)'
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        style={{
-                          fontSize: 'var(--text-xs)',
-                          padding: 'var(--space-1) var(--space-3)',
-                          backgroundColor: 'var(--color-primary)', // Primary color for visibility
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        Add
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
